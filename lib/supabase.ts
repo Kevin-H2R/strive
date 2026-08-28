@@ -3,6 +3,8 @@ import { setupURLPolyfill } from 'react-native-url-polyfill';
 setupURLPolyfill();
 import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
+import { makeRedirectUri } from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 
 const ExpoSecureStoreAdapter = {
   getItem: (key: string) => {
@@ -25,6 +27,30 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: ExpoSecureStoreAdapter,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: true,
   },
 });
+
+const redirectUrl = makeRedirectUri();
+
+export async function signInWithGoogle() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: redirectUrl },
+  });
+
+  if (error) throw error;
+  if (data?.url) {
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+    if (result.type === 'success') {
+      const url = new URL(result.url);
+      const params = new URLSearchParams(url.hash.substring(1));
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      if (accessToken && refreshToken) {
+        await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      }
+    }
+  }
+}
+

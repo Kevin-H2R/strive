@@ -12,6 +12,7 @@ import {
 import { Link } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
 import { theme } from '@/constants/theme';
+import { signInWithGoogle } from '@/lib/supabase';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
@@ -20,7 +21,20 @@ export default function RegisterScreen() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
   const signUp = useAuthStore((state) => state.signUp);
+
+  const handleGoogleSignIn = async () => {
+    setOauthLoading(true);
+    setError('');
+    try {
+      await signInWithGoogle();
+    } catch (e: any) {
+      setError(e.message || 'Failed to sign in with Google');
+    } finally {
+      setOauthLoading(false);
+    }
+  };
 
   const handleRegister = async () => {
     if (!email || !password || !confirmPassword) {
@@ -114,6 +128,23 @@ export default function RegisterScreen() {
                 <ActivityIndicator color={theme.buttonPrimaryText} />
               ) : (
                 <Text style={styles.buttonText}>Sign Up</Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.socialButton, oauthLoading && styles.buttonDisabled]}
+              onPress={handleGoogleSignIn}
+              disabled={oauthLoading}>
+              {oauthLoading ? (
+                <ActivityIndicator color={theme.buttonSecondaryText} />
+              ) : (
+                <Text style={styles.socialButtonText}>Sign up with Google</Text>
               )}
             </TouchableOpacity>
 
@@ -214,5 +245,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 24,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: theme.inputBorder,
+  },
+  dividerText: {
+    color: theme.textSecondary,
+    paddingHorizontal: 16,
+    fontSize: 14,
+  },
+  socialButton: {
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: theme.buttonSecondaryBorder,
+    backgroundColor: theme.buttonSecondary,
+  },
+  socialButtonText: {
+    color: theme.buttonSecondaryText,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
