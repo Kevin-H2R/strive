@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Exercise, getPrimaryMuscleId } from '@/constants/exercises';
 import { WorkoutTemplate, TemplateExercise } from '@/hooks/useTemplates';
+import { supabase } from '@/lib/supabase';
 
 export interface WorkoutSet {
   id: string;
@@ -72,8 +73,9 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
           id: generateId(),
           exerciseId: te.exerciseId,
           setNumber: i + 1,
-          weight: 0,
-          reps: 0,
+          // Coach prescription; extra sets added by hand repeat the last target.
+          weight: (te.targets?.[i] ?? te.targets?.at(-1))?.weight ?? 0,
+          reps: (te.targets?.[i] ?? te.targets?.at(-1))?.reps ?? 0,
           completed: false,
         }));
 
@@ -92,6 +94,10 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
         exercises: exerciseEntries,
       },
     });
+    prefillFromHistory(
+      template.exercises.filter((te) => !te.targets?.length).map((te) => te.exerciseId),
+      set
+    );
   },
 
   setWorkoutDate: (date: Date) => {
@@ -146,6 +152,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
         },
       };
     });
+    prefillFromHistory([exercise.id], set);
   },
 
   removeExercise: (exerciseId: number) => {
@@ -313,3 +320,53 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
     return setsByMuscle;
   },
 }));
+
+// Fill untouched sets with what you did last time on that exercise (no coach target).
+async function prefillFromHistory(
+  exerciseIds: number[],
+  set: (fn: (state: WorkoutState) => Partial<WorkoutState>) => void
+) {
+  if (exerciseIds.length === 0) return;
+  // ponytail: newest 500 sets cover the latest session of every exercise in a workout.
+  const { data } = await supabase
+    .from('workout_sets')
+    .select('exercise_id, workout_id, set_number, weight, reps, workouts!inner(started_at)')
+    .in('exercise_id', exerciseIds)
+    .order('created_at', { ascending: false })
+    .limit(500);
+  if (!data?.length) return;
+
+  // Rows aren't sorted by the joined column, so pick each exercise's latest workout explicitly.
+  const latest = new Map<number, { workoutId: string; startedAt: string }>();
+  for (const row of data as any[]) {
+    const cur = latest.get(row.exercise_id);
+    if (!cur || row.workouts.started_at > cur.startedAt) {
+      latest.set(row.exercise_id, { workoutId: row.workout_id, startedAt: row.workouts.started_at });
+    }
+  }
+  const lastSets = new Map<number, { weight: number; reps: number }[]>();
+  for (const row of [...(data as any[])].sort((a, b) => a.set_number - b.set_number)) {
+    if (latest.get(row.exercise_id)?.workoutId !== row.workout_id) continue;
+    lastSets.set(row.exercise_id, [...(lastSets.get(row.exercise_id) ?? []), { weight: row.weight, reps: row.reps }]);
+  }
+
+  set((state) => {
+    if (!state.activeWorkout) return {};
+    return {
+      activeWorkout: {
+        ...state.activeWorkout,
+        exercises: state.activeWorkout.exercises.map((entry) => {
+          const prev = lastSets.get(entry.exerciseId);
+          if (!prev) return entry;
+          return {
+            ...entry,
+            sets: entry.sets.map((s, i) => {
+              const p = prev[i] ?? prev[prev.length - 1];
+              return s.completed || s.weight || s.reps ? s : { ...s, weight: Number(p.weight), reps: p.reps };
+            }),
+          };
+        }),
+      },
+    };
+  });
+}

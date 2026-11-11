@@ -5,6 +5,8 @@ import { useAuthStore } from '@/stores/authStore';
 export interface TemplateExercise {
   exerciseId: number;
   sets: number;
+  targets?: { weight: number; reps: number }[]; // prefilled per-set values (AI coach)
+  cue?: string; // coach's technique note
 }
 
 export interface WorkoutTemplate {
