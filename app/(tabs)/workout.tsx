@@ -18,6 +18,7 @@ import { ExercisePicker } from '@/components/workout/ExercisePicker';
 import { ExerciseCard } from '@/components/workout/ExerciseCard';
 import { WorkoutStartModal } from '@/components/workout/WorkoutStartModal';
 import { saveWorkout } from '@/hooks/useWorkouts';
+import { runCoach } from '@/lib/coach';
 import { useExercises } from '@/hooks/useExercises';
 import { Exercise } from '@/constants/exercises';
 import { WorkoutTemplate } from '@/hooks/useTemplates';
@@ -87,19 +88,21 @@ export default function WorkoutScreen() {
       return;
     }
 
-    Alert.alert(
+    // ponytail: Alert.prompt is iOS-only; fine for an iPhone app.
+    Alert.prompt(
       'Finish Workout',
-      `Save this workout with ${completedSets} completed sets?`,
+      `Save ${completedSets} sets? How did it feel — any pain or tweaks? (your coach reads this)`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Save',
-          onPress: async () => {
+          onPress: async (notes?: string) => {
             setSaving(true);
             try {
               const workoutData = {
                 name: activeWorkout.name,
                 startedAt: activeWorkout.startedAt,
+                notes: notes?.trim(),
                 exercises: activeWorkout.exercises.map((e) => ({
                   exerciseId: e.exerciseId,
                   sets: e.sets
@@ -110,7 +113,9 @@ export default function WorkoutScreen() {
 
               await saveWorkout(user.id, workoutData);
               endWorkout();
-              Alert.alert('Success', 'Workout saved successfully!');
+              // Coach adjusts the next session in the background; the Coach tab shows the result.
+              runCoach().catch((e) => console.warn('Coach update failed:', e.message));
+              Alert.alert('Saved', 'Your coach is planning the next session — check the Coach tab in a minute.');
             } catch (error) {
               Alert.alert('Error', 'Failed to save workout. Please try again.');
             } finally {

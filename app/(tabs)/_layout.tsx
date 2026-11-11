@@ -44,6 +44,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="coach"
+        options={{
+          title: 'Coach',
+          tabBarIcon: ({ color }) => <TabBarIcon name="bolt" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="planner"
         options={{
           title: 'Planner',

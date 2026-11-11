@@ -240,6 +240,7 @@ export async function saveWorkout(
   workout: {
     name: string;
     startedAt: Date;
+    notes?: string;
     exercises: {
       exerciseId: number;
       sets: { weight: number; reps: number }[];
@@ -253,6 +254,7 @@ export async function saveWorkout(
       name: workout.name,
       started_at: workout.startedAt.toISOString(),
       completed_at: new Date().toISOString(),
+      notes: workout.notes || null,
     })
     .select()
     .single();
