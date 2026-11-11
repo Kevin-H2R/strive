@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   format,
   startOfWeek,
@@ -48,6 +49,10 @@ export default function PlannerScreen() {
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
   const user = useAuthStore((state) => state.user);
+  const router = useRouter();
+
+  // Refetch on focus so templates written by the coach show up.
+  useFocusEffect(useCallback(() => { fetchTemplates(); }, [user]));
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -251,9 +256,7 @@ export default function PlannerScreen() {
               <TouchableOpacity
                 key={template.id}
                 style={styles.templateCard}
-                onPress={() => {
-                  setShowTemplateModal(true);
-                }}>
+                onPress={() => router.push(`/template/${template.id}`)}>
                 <Text style={styles.templateName}>{template.name}</Text>
                 <FontAwesome name="chevron-right" size={16} color={theme.textMuted} />
               </TouchableOpacity>

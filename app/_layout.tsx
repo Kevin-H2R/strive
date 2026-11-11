@@ -16,6 +16,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import { TamaguiProvider } from "tamagui";
 import config from "../tamagui.config";
+import { theme } from "@/constants/theme";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -132,10 +133,11 @@ function RootLayoutNav() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen
-            name="workout/[id]"
+            name="template/[id]"
             options={{
-              title: "Active Workout",
-              presentation: "modal",
+              title: "Template",
+              headerStyle: { backgroundColor: theme.background },
+              headerTintColor: theme.text,
             }}
           />
         </Stack>
