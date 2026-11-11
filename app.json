@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "workout-tracker",
+    "name": "Strive",
     "slug": "workout-tracker",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -16,7 +16,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.kebinou.workout-tracker"
+      "bundleIdentifier": "com.kebinou.strivetracker",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
